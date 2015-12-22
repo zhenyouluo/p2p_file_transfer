@@ -36,7 +36,7 @@ strcpy(frag_meta.name,file_name);
 frag_meta.frag_no=i;
 frag_meta.size=(i!=chunks)?max_buffer_size:(file_size-(file_size/frag_size)*frag_size)+sizeof(frag_meta);
 
-fstream tmp_handle(tmp_name,ios::out|ios::binary);
+fstream tmp_handle(tmp_name,ios::out);
 if(!tmp_handle){
 cout<<"Cannot Create file "<<tmp_name<<endl;
 }
@@ -68,7 +68,7 @@ cout<<"Could Not create File for copying\n";
 }
 
 sprintf(tmp_name,"%s%c%lld%c%s",file_name,'$',i,'.',"tmp");
-fstream tmp_handle(tmp_name,ios::in|ios::binary);
+fstream tmp_handle(tmp_name,ios::in);
 if(!tmp_handle){
 cout<<"Could Not Read File\n";
 }
@@ -93,7 +93,7 @@ char tmp_name[MAX_FILE_NAME+28];
 meta_buf=(file_meta *)buf1;
 sprintf(tmp_name,"%s%c%lld%c%s",meta_buf->name,'$',meta_buf->frag_no,'.',"tmp");
 fstream file_out(tmp_name,ios::out|ios::binary);
-buf1+=sizeof(file_meta);
-file_out.write(buf1,meta_buf->size-sizeof(file_meta));
+file_out.write(buf1,meta_buf->size);
+file_out.close();
 }
 

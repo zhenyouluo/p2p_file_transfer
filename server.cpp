@@ -83,7 +83,7 @@ cout<<"connection_created with client \n";
 cout<< ntohs(client_addr.sin_port)<<endl;
 }
 char file_name[MAX_FILE_NAME+28];
-cout<<"Enter file to transmit";
+cout<<"Enter file to transmit ";
 cin>>file_name;
 send_frags(socket_2_talk,file_name);
 remove(file_name);
