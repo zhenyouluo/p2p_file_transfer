@@ -5,7 +5,6 @@
 
 using namespace std;
 
-char home[200]="/home/hawking/file_transfer";
 long long chunks;
 
 void disassemble_file(char *file_name, long long &chunks)
@@ -82,7 +81,7 @@ out_file.close();
 tmp_handle.close();
 remove(tmp_name);
 }
-//rename(out_file_name,file_name);
+rename(out_file_name,file_name);
 }
 
 //store the buffer recieved as the format *$id.tmp required for reassembly
