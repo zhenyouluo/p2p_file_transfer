@@ -94,13 +94,6 @@ file_out.write(buf1,meta_buf->size);
 file_out.close();
 }
 
-//TODO send acknowledgment to server
-void send_ack(int sock)
-{
-
-
-}
-
 long long recv_all(int sock,char *buf,size_t ttl_bytes,int flag)
 {
 long long bytes_read=0;
