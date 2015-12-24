@@ -4,15 +4,86 @@
 #include<sys/socket.h>
 #include<memory.h>
 #include<netdb.h>
-#include <arpa/inet.h>
+#include<arpa/inet.h>
 #include<netinet/ip.h>
 #include<netinet/tcp.h> //for IPROTO_TCP
 #include"utility1.h"
-
+#include<cstdlib>
 using namespace std;
 
 struct addrinfo hints,*list;
 int client_socket=-1;
+long long max_socket_buf_size;
+
+void print_packet(control_packet *pkt)
+{
+cout<<"Packet_type "<<ntohl(pkt->packet_type)<<endl;
+cout<<"Packet_id "<<ntohl(pkt->packet_id)<<endl;
+cout<<"First Arg "<<pkt->first_arg<<endl;
+cout<<"Second Arg "<<pkt->second_arg<<endl;
+}
+
+int init_trnsfr(int sock,char *file_name,long long sock_size)
+{
+int bytes_sent,bytes_rcvd;
+char buf[max_buffer_size];
+long long file_chunks;
+control_packet pkt,*pkt_rcvd;
+memset(&pkt,0,sizeof(control_packet));
+
+pkt.packet_type=htonl(req);
+pkt.packet_id=htonl(file_transfer|buffer_size_rply);
+strcpy(pkt.first_arg,file_name);
+sprintf(pkt.second_arg,"%lld",sock_size);
+
+bytes_sent=send(sock,(char*)&pkt,sizeof(pkt),0);
+if(bytes_sent==-1)
+{
+cout<<"Error In sending control packet\n";
+return -1;
+}
+bytes_rcvd=recv(sock,buf,sizeof(control_packet),0);
+pkt_rcvd=(control_packet*)buf;
+
+if(ntohl(pkt_rcvd->packet_id)!=no_of_chunks)
+{
+cout<<"Error getting no_of_chunks from server\n";
+return -1;
+}
+file_chunks=atoi(pkt_rcvd->first_arg);
+
+//send ready to recieve packet
+pkt.packet_type=htonl(info);
+pkt.packet_id=htonl(ready_to_recieve);
+
+bytes_sent=send(sock,(char *)&pkt,sizeof(control_packet),0);
+if(bytes_sent==-1){
+cout<<"Error sending ready_to_recieve_packet";
+return -1;
+}
+
+//recieving file segments
+for(int i=1;i<=file_chunks;++i)
+{
+bytes_rcvd=recv(sock,buf,max_buffer_size,0);
+if(bytes_rcvd==-1)
+{
+cout<<"Error Recieving file segments\n";
+return -1;
+}
+
+if(bytes_sent==-1)
+{
+cout<<"Could not acknowledge packet delivery\n";
+//TODO some error handling can be done
+return -1;
+}
+create_files(buf);
+
+}
+assemble_files(file_name,file_chunks);
+
+}
 
 void create_socket()
 {
@@ -36,10 +107,8 @@ return;
 }
 
 connect_st=connect(client_socket,list->ai_addr,list->ai_addrlen);
-int max_socket_buf_size;
-unsigned int size_unsigned=sizeof(int);
+unsigned int size_unsigned=sizeof(long long);
 getsockopt(client_socket,SOL_SOCKET,SO_RCVBUF,(void *)&max_socket_buf_size,&size_unsigned);
-cout<<"max socket buf "<<max_socket_buf_size<<endl;;
 
 if(connect_st==-1)
 {
@@ -47,10 +116,11 @@ cout<<"Problem Connecting\n";
 continue;
 }
 }
-char buf[64*1024];
-bytes_read=recv(client_socket,buf,sizeof(buf),MSG_WAITALL);
-cout<<bytes_read<<endl;
-create_files(buf);
+char file_name[MAX_FILE_NAME];
+cout<<"Enter File Name to copy\n";
+cin>>file_name;
+
+init_trnsfr(client_socket,file_name,max_socket_buf_size);
 
 close(client_socket);
 }

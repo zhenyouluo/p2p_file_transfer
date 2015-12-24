@@ -5,18 +5,15 @@
 
 using namespace std;
 
-long long chunks;
-
-void disassemble_file(char *file_name, long long &chunks)
+int disassemble_file(char *file_name, long long &chunks)
 {
 char tmp_name[MAX_FILE_NAME+21];
 char buf[max_buffer_size];
 file_meta frag_meta;
-
 fstream file_in(file_name,ios::in|ios::binary|ios::ate);
 if(!file_in){
 cout<<"Invalid File Name\n";
-return;
+return -1;
 }
 
 long long file_size=file_in.tellg();
@@ -38,6 +35,8 @@ frag_meta.size=(i!=chunks)?max_buffer_size:(file_size-(file_size/frag_size)*frag
 fstream tmp_handle(tmp_name,ios::out);
 if(!tmp_handle){
 cout<<"Cannot Create file "<<tmp_name<<endl;
+file_in.close();
+return -1;
 }
 
 tmp_handle.write((char *)&frag_meta,sizeof(file_meta));
@@ -46,7 +45,7 @@ tmp_handle.close();
 }
 
 file_in.close();
-
+return 0;
 }
 
 void assemble_files(char *file_name,int chunks)
@@ -58,7 +57,6 @@ int bytes_read;
 fstream out_file;
 
 sprintf(out_file_name,"%s_1",file_name);
-cout<<"out file "<<out_file_name<<endl;
 for(long long i=1;i<=chunks;++i){
 out_file.open(out_file_name,ios::out|ios::app|ios::binary);
 if(!out_file)
@@ -81,10 +79,10 @@ out_file.close();
 tmp_handle.close();
 remove(tmp_name);
 }
-rename(out_file_name,file_name);
+//rename(out_file_name,file_name);
 }
 
-//store the buffer recieved as the format *$id.tmp required for reassembly
+//store the buffer recieved, as a file of the format *$id.tmp required for reassembly
 void create_files(char *buf1)
 {
 file_meta *meta_buf;
@@ -96,3 +94,27 @@ file_out.write(buf1,meta_buf->size);
 file_out.close();
 }
 
+//TODO send acknowledgment to server
+void send_ack(int sock)
+{
+
+
+}
+
+long long recv_all(int sock,char *buf,size_t ttl_bytes,int flag)
+{
+long long bytes_read=0;
+long long ttl_bytes_to_read=0;
+bytes_read=recv(sock,buf,ttl_bytes,flag);
+file_meta *meta=(file_meta *)buf;
+ttl_bytes_to_read=meta->size;
+
+while(bytes_read<ttl_bytes_to_read)
+{
+bytes_read+=recv(sock,buf+bytes_read,ttl_bytes-bytes_read,0);
+}
+cout<<bytes_read<<endl;
+create_files(buf);
+send_ack(sock);
+return bytes_read;
+}
