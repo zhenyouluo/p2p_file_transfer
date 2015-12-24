@@ -108,6 +108,5 @@ bytes_read+=recv(sock,buf+bytes_read,ttl_bytes-bytes_read,0);
 }
 cout<<bytes_read<<endl;
 create_files(buf);
-send_ack(sock);
 return bytes_read;
 }
