@@ -25,14 +25,14 @@ cout<<"Second Arg "<<pkt->second_arg<<endl;
 
 int init_trnsfr(int sock,char *file_name,long long sock_size)
 {
-int bytes_sent,bytes_rcvd;
+long long bytes_sent,bytes_rcvd;
 char buf[max_buffer_size];
 long long file_chunks;
 control_packet pkt,*pkt_rcvd;
 memset(&pkt,0,sizeof(control_packet));
 
 pkt.packet_type=htonl(req);
-pkt.packet_id=htonl(file_transfer|buffer_size_rply);
+pkt.packet_id=htonl(file_transfer);
 strcpy(pkt.first_arg,file_name);
 sprintf(pkt.second_arg,"%lld",sock_size);
 
@@ -65,13 +65,18 @@ return -1;
 //recieving file segments
 for(int i=1;i<=file_chunks;++i)
 {
-bytes_rcvd=recv(sock,buf,max_buffer_size,0);
+bytes_rcvd=recv_all(sock,buf,max_buffer_size,0);
 if(bytes_rcvd==-1)
 {
 cout<<"Error Recieving file segments\n";
 return -1;
 }
 
+pkt.packet_type=htonl(info);
+pkt.packet_id=htonl(prev_packet_recieved);
+sprintf(pkt.first_arg,"%lld",bytes_rcvd);
+
+bytes_sent=send(sock,(char*)&pkt,sizeof(pkt),0);
 if(bytes_sent==-1)
 {
 cout<<"Could not acknowledge packet delivery\n";
@@ -119,7 +124,8 @@ continue;
 char file_name[MAX_FILE_NAME];
 cout<<"Enter File Name to copy\n";
 cin>>file_name;
-
+cout<<"Enter Directory to store file in\n";
+cin>>basedir_c;
 init_trnsfr(client_socket,file_name,max_socket_buf_size);
 
 close(client_socket);

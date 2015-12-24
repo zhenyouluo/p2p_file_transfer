@@ -5,12 +5,22 @@
 
 using namespace std;
 
+char basedir_s[MAX_FILE_NAME];
+char basedir_c[MAX_FILE_NAME];
+
+void getbasedir()
+{
+getcwd(basedir_s,MAX_FILE_NAME);
+}
+
 int disassemble_file(char *file_name, long long &chunks)
 {
-char tmp_name[MAX_FILE_NAME+21];
+char tmp_name[MAX_FILE_NAME];
+char tmp_file_name[2*MAX_FILE_NAME];
 char buf[max_buffer_size];
 file_meta frag_meta;
-fstream file_in(file_name,ios::in|ios::binary|ios::ate);
+sprintf(tmp_file_name,"%s/%s",basedir_s,file_name);
+fstream file_in(tmp_file_name,ios::in|ios::binary|ios::ate);
 if(!file_in){
 cout<<"Invalid File Name\n";
 return -1;
@@ -24,7 +34,7 @@ file_in.seekg(0,ios::beg);
 
 for(long long i=1;i<=chunks;++i)
 {
-sprintf(tmp_name,"%s%c%lld%c%s",file_name,'$',i,'.',"tmp");
+sprintf(tmp_name,"%s/.%s%c%lld%c%s",basedir_s,file_name,'$',i,'.',"tmp");
 file_in.read(buf,frag_size);
 bytes_read=file_in.gcount();
 
@@ -50,21 +60,21 @@ return 0;
 
 void assemble_files(char *file_name,int chunks)
 {
-char tmp_name[MAX_FILE_NAME+28];
-char out_file_name[MAX_FILE_NAME];
+char tmp_name[MAX_FILE_NAME];
+char out_file_name[2*MAX_FILE_NAME];
 char buf[max_buffer_size];
 int bytes_read;
 fstream out_file;
 
-sprintf(out_file_name,"%s_1",file_name);
-for(long long i=1;i<=chunks;++i){
+sprintf(out_file_name,"%s/%s",basedir_c,file_name);
 out_file.open(out_file_name,ios::out|ios::app|ios::binary);
+for(long long i=1;i<=chunks;++i){
 if(!out_file)
 {
 cout<<"Could Not create File for copying\n";
 }
 
-sprintf(tmp_name,"%s%c%lld%c%s",file_name,'$',i,'.',"tmp");
+sprintf(tmp_name,"%s/.%s%c%lld%c%s",basedir_c,file_name,'$',i,'.',"tmp");
 fstream tmp_handle(tmp_name,ios::in);
 if(!tmp_handle){
 cout<<"Could Not Read File\n";
@@ -75,20 +85,19 @@ tmp_handle.read(buf,max_buffer_size);
 bytes_read=tmp_handle.gcount();
 
 out_file.write(buf,bytes_read);
-out_file.close();
 tmp_handle.close();
 remove(tmp_name);
 }
-//rename(out_file_name,file_name);
+out_file.close();
 }
 
 //store the buffer recieved, as a file of the format *$id.tmp required for reassembly
 void create_files(char *buf1)
 {
 file_meta *meta_buf;
-char tmp_name[MAX_FILE_NAME+28];
+char tmp_name[2*MAX_FILE_NAME];
 meta_buf=(file_meta *)buf1;
-sprintf(tmp_name,"%s%c%lld%c%s",meta_buf->name,'$',meta_buf->frag_no,'.',"tmp");
+sprintf(tmp_name,"%s/.%s%c%lld%c%s",basedir_c,meta_buf->name,'$',meta_buf->frag_no,'.',"tmp");
 fstream file_out(tmp_name,ios::out|ios::binary);
 file_out.write(buf1,meta_buf->size);
 file_out.close();
@@ -106,7 +115,18 @@ while(bytes_read<ttl_bytes_to_read)
 {
 bytes_read+=recv(sock,buf+bytes_read,ttl_bytes-bytes_read,0);
 }
-cout<<bytes_read<<endl;
 create_files(buf);
 return bytes_read;
 }
+
+void remove_files(char *file_name,long long chunks)
+{
+char tmp_name[2*MAX_FILE_NAME];
+for(long long i=1;i<=chunks;++i)
+{
+sprintf(tmp_name,"%s/.%s%c%lld%c%s",basedir_s,file_name,'$',i,'.',"tmp");
+remove(file_name);
+}
+
+}
+
