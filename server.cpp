@@ -11,14 +11,54 @@
 #include"utility1.h"
 #include<cstdlib>
 #include<cstring>
+#include<pthread.h>
 
 using namespace std;
 
+pthread_t threads[1000];
 static struct addrinfo hints,*list;
 static int server_socket=-1;
 static int clear_value=1;
 int send_frags(int sock,char *buf);
 int handle_request(int sock,char *buf,size_t size,int flag);
+pthread_key_t socket_desc;
+
+struct thread_data{
+int socket_t;
+char ip[20];
+};
+
+void *thread_funct(void *data)
+{
+int bytes_read;
+cout<<"Server Thread with id "<<pthread_self()<<endl;
+thread_data *tmp_data=(thread_data*)data;
+int socket_2_talk=tmp_data->socket_t;
+char ip[20];
+strcpy(ip,tmp_data->ip);
+setsockopt(socket_2_talk,SOL_SOCKET,SO_REUSEADDR,&clear_value,sizeof(int));
+if(socket_2_talk!=-1)
+{
+cout<<"connection_created with client "<<ip<<"\n";
+}
+char buf[max_buffer_size];
+bytes_read=recv(socket_2_talk,buf,max_buffer_size,0);
+if(bytes_read==-1)
+{
+cout<<"Error in reading buffer\n";
+close(socket_2_talk);
+return NULL;
+}
+int st=handle_request(socket_2_talk,buf,max_buffer_size,0);
+if(st==-1){
+cout<<"Error in handling request\n";
+close(socket_2_talk);
+return NULL;
+}
+
+close(socket_2_talk);
+return NULL;
+}
 
 void create_socket()
 {
@@ -72,42 +112,32 @@ socklen_t size_client=sizeof(client_addr);
 int socket_2_talk;
 int ttl_connection=0;
 int bytes_read=0;
+int i=0;
+pthread_attr_t attr;
+pthread_attr_init(&attr);
+pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED);
 
 while(1)
 {
 cout<<"Ready to accept new connections\n";
-char ip[20];
+char ip[INET_ADDRSTRLEN];
 socket_2_talk=accept(server_socket,(struct sockaddr*)&client_addr,&size_client);
 if(socket_2_talk==-1){
 cout<<"Connection not accepted\n";
 continue;
 }
 inet_ntop(AF_INET,&client_addr.sin_addr,ip,INET_ADDRSTRLEN);
-setsockopt(socket_2_talk,SOL_SOCKET,SO_REUSEADDR,&clear_value,sizeof(int));
-if(socket_2_talk!=-1)
-{
-cout<<"connection_created with client "<<ip<<"\n";
+thread_data data;
+data.socket_t=socket_2_talk;
+strcpy(data.ip,ip);
+if(i<1000)
+pthread_create(&threads[i++],&attr,&thread_funct,(void *)&data);
+else {
+cout<<"No Threads available\n";
 }
-char buf[max_buffer_size];
-bytes_read=recv(socket_2_talk,buf,max_buffer_size,0);
-if(bytes_read==-1)
-{
-cout<<"Error in reading buffer\n";
-close(socket_2_talk);
-return;
 }
-int st=handle_request(socket_2_talk,buf,max_buffer_size,0);
-if(st==-1){
-cout<<"Error in handling request\n";
-close(socket_2_talk);
-continue;
-}
-
-close(socket_2_talk);
-
-}
-
 close(server_socket);
+pthread_attr_destroy(&attr);
 }
 
 int send_frags(int sock,char *file_name)
@@ -157,7 +187,7 @@ pkt=(control_packet*)buf;
 pkt_type=ntohl(pkt->packet_type);
 pkt_id=ntohl(pkt->packet_id);
 
-for(int i=0;i<8;++i)
+for(int i=0;i<NO_OF_PACKET_IDS;++i)
 {
 if((pkt_id & 1<<i) && req1==-1) req1=i;
 else req2=i; 
