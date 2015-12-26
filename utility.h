@@ -3,6 +3,9 @@
 #define MAX_IP_SIZE 20
 #define SERVER_PORT "8999"
 #define MAX_ALLOWED_CONN 10
+#define MAX_DIV_FOR_FILE 10
+#define MAX_THREADS 10
+#define NO_OF_PACKET_IDS 8
 #define server_port "8999"
 
 //pakcet ID's
@@ -13,7 +16,7 @@
 #define ready_to_recieve 1<<4
 #define prev_packet_recieved 1<<5
 #define data_trnsfr_done 1<<6
-#define prev_request_ack 1<<7
+#define prev_req_ack 1<<7
 
 int max_buffer_size=64*1024;
 char server_addr[MAX_IP_SIZE]= "192.168.0.11";
